@@ -7,6 +7,8 @@ services:
     extra_hosts:
       - "host.docker.internal:host-gateway"
     restart: unless-stopped
+    env_file:
+      - .env.prod
     environment:
       PORT: ${PORT:-5000}
       HF_HOME: /app/hfcache
@@ -23,12 +25,12 @@ services:
     labels:
       - "traefik.enable=true"
       # HTTP Router (Redirects to HTTPS)
-      - "traefik.http.routers.web-${PROJECT_NAME}.rule=Host(`${BACKEND_DOMAIN}`) || Host(`www.${BACKEND_DOMAIN}`)"
+      - "traefik.http.routers.web-${PROJECT_NAME}.rule=Host(`${BACKEND_DOMAIN}`)"
       - "traefik.http.routers.web-${PROJECT_NAME}.entrypoints=web"
       - "traefik.http.routers.web-${PROJECT_NAME}.middlewares=redirect-to-https"
 
       # HTTPS Router
-      - "traefik.http.routers.web-secure-${PROJECT_NAME}.rule=Host(`${BACKEND_DOMAIN}`) || Host(`www.${BACKEND_DOMAIN}`)"
+      - "traefik.http.routers.web-secure-${PROJECT_NAME}.rule=Host(`${BACKEND_DOMAIN}`)"
       - "traefik.http.routers.web-secure-${PROJECT_NAME}.entrypoints=websecure"
       - "traefik.http.routers.web-secure-${PROJECT_NAME}.tls=true"
       - "traefik.http.routers.web-secure-${PROJECT_NAME}.tls.certresolver=myresolver"
