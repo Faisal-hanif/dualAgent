@@ -30,7 +30,7 @@ def register():
     cursor = conn.cursor()
     try:
         cursor.execute(
-            "INSERT INTO users (username, email, password_hash, role) VALUES (?, ?, ?, ?)",
+            "INSERT INTO users (username, email, password_hash, role) VALUES (%s, %s, %s, %s)",
             (username, email, hash_password(password), "user"),
         )
         conn.commit()
@@ -52,7 +52,7 @@ def login():
 
     conn   = get_db()
     cursor = conn.cursor()
-    cursor.execute("SELECT * FROM users WHERE email = ?", (email,))
+    cursor.execute("SELECT * FROM users WHERE email = %s", (email,))
     user = cursor.fetchone()
     conn.close()
 

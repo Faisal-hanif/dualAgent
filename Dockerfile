@@ -48,7 +48,6 @@ COPY models.py ./
 COPY make_admin.py ./
 COPY requirements.txt ./
 COPY llm-finetune ./llm-finetune
-COPY sqa_agent.db ./sqa_agent.db
 
 RUN mkdir -p /app/hfcache \
     && chown -R appuser:appuser /app

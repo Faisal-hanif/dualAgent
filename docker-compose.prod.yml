@@ -12,10 +12,9 @@ services:
     environment:
       PORT: ${PORT:-5000}
       HF_HOME: /app/hfcache
+      DATABASE_URL: postgresql://neondb_owner:npg_b1q0RzWZrcIl@ep-still-dream-atfk5a1y.c-9.us-east-1.aws.neon.tech/neondb
     expose:
       - "5000"
-    volumes:
-      - ./sqa_agent.db:/app/sqa_agent.db
     healthcheck:
       test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://localhost:5000/api/health')"]
       interval: 30s

@@ -15,7 +15,8 @@ def save_test_result(user_id: int, result_data: dict) -> int:
             (user_id, url, score, load_time,
              total_links, working_links, broken_links, broken_links_list,
              technologies, trust_score, excitement_score, professionalism_score)
-        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+        VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s)
+        RETURNING id
         """,
         (
             user_id,
@@ -32,10 +33,10 @@ def save_test_result(user_id: int, result_data: dict) -> int:
             emotions.get("professionalism_score", 0),
         ),
     )
-    test_result_id = cursor.lastrowid
+    test_result_id = cursor.fetchone()["id"]
 
     cursor.execute(
-        "INSERT INTO test_history (user_id, test_result_id, url, score) VALUES (?, ?, ?, ?)",
+        "INSERT INTO test_history (user_id, test_result_id, url, score) VALUES (%s, %s, %s, %s)",
         (user_id, test_result_id, result_data.get("url"), result_data.get("score")),
     )
 
@@ -51,7 +52,7 @@ def save_ai_suggestion(test_result_id: int, url: str,
     cursor.execute(
         """
         INSERT INTO ai_suggestions (test_result_id, url, score, broken_count, suggestion)
-        VALUES (?, ?, ?, ?, ?)
+        VALUES (%s, %s, %s, %s, %s)
         """,
         (test_result_id, url, score, broken_count, suggestion),
     )
@@ -78,7 +79,7 @@ def get_user_history(user_id: int) -> list[dict]:
              ORDER BY id DESC LIMIT 1) AS suggestion
         FROM test_history th
         LEFT JOIN test_results tr ON th.test_result_id = tr.id
-        WHERE th.user_id = ?
+        WHERE th.user_id = %s
         ORDER BY th.tested_at DESC
         LIMIT 50
         """,
@@ -114,7 +115,7 @@ def get_user_history(user_id: int) -> list[dict]:
 def get_test_detail(test_result_id: int) -> dict | None:
     conn   = get_db()
     cursor = conn.cursor()
-    cursor.execute("SELECT * FROM test_results WHERE id = ?", (test_result_id,))
+    cursor.execute("SELECT * FROM test_results WHERE id = %s", (test_result_id,))
     row = cursor.fetchone()
     conn.close()
     return dict(row) if row else None
@@ -128,14 +129,14 @@ def get_test_full_detail(test_result_id: int) -> dict | None:
     """
     conn   = get_db()
     cursor = conn.cursor()
-    cursor.execute("SELECT * FROM test_results WHERE id = ?", (test_result_id,))
+    cursor.execute("SELECT * FROM test_results WHERE id = %s", (test_result_id,))
     row = cursor.fetchone()
     if not row:
         conn.close()
         return None
 
     cursor.execute(
-        "SELECT suggestion FROM ai_suggestions WHERE test_result_id = ? ORDER BY id DESC LIMIT 1",
+        "SELECT suggestion FROM ai_suggestions WHERE test_result_id = %s ORDER BY id DESC LIMIT 1",
         (test_result_id,),
     )
     suggestion_row = cursor.fetchone()
@@ -197,7 +198,7 @@ def get_all_tests(limit: int = 200) -> list[dict]:
                working_links, load_time, tested_at
         FROM test_results
         ORDER BY tested_at DESC
-        LIMIT ?
+        LIMIT %s
         """,
         (limit,),
     )
@@ -243,11 +244,11 @@ def delete_user(user_id: int) -> None:
     # Clean up dependent rows first so we don't leave orphaned records behind
     cursor.execute(
         "DELETE FROM ai_suggestions WHERE test_result_id IN "
-        "(SELECT id FROM test_results WHERE user_id = ?)", (user_id,)
+        "(SELECT id FROM test_results WHERE user_id = %s)", (user_id,)
     )
-    cursor.execute("DELETE FROM test_history WHERE user_id = ?", (user_id,))
-    cursor.execute("DELETE FROM test_results WHERE user_id = ?", (user_id,))
-    cursor.execute("DELETE FROM users WHERE id = ?", (user_id,))
+    cursor.execute("DELETE FROM test_history WHERE user_id = %s", (user_id,))
+    cursor.execute("DELETE FROM test_results WHERE user_id = %s", (user_id,))
+    cursor.execute("DELETE FROM users WHERE id = %s", (user_id,))
     conn.commit()
     conn.close()
 
@@ -255,9 +256,9 @@ def delete_user(user_id: int) -> None:
 def delete_test(test_id: int) -> None:
     conn   = get_db()
     cursor = conn.cursor()
-    cursor.execute("DELETE FROM ai_suggestions WHERE test_result_id = ?", (test_id,))
-    cursor.execute("DELETE FROM test_history WHERE test_result_id = ?", (test_id,))
-    cursor.execute("DELETE FROM test_results WHERE id = ?", (test_id,))
+    cursor.execute("DELETE FROM ai_suggestions WHERE test_result_id = %s", (test_id,))
+    cursor.execute("DELETE FROM test_history WHERE test_result_id = %s", (test_id,))
+    cursor.execute("DELETE FROM test_results WHERE id = %s", (test_id,))
     conn.commit()
     conn.close()
 
@@ -269,16 +270,16 @@ def get_user_stats(user_id: int) -> dict:
     conn   = get_db()
     cursor = conn.cursor()
 
-    cursor.execute("SELECT COUNT(*) AS c FROM test_results WHERE user_id = ?", (user_id,))
+    cursor.execute("SELECT COUNT(*) AS c FROM test_results WHERE user_id = %s", (user_id,))
     total_tests = cursor.fetchone()["c"]
 
-    cursor.execute("SELECT COALESCE(AVG(score), 0) AS a FROM test_results WHERE user_id = ?", (user_id,))
+    cursor.execute("SELECT COALESCE(AVG(score), 0) AS a FROM test_results WHERE user_id = %s", (user_id,))
     avg_score = cursor.fetchone()["a"]
 
-    cursor.execute("SELECT COALESCE(MAX(score), 0) AS m FROM test_results WHERE user_id = ?", (user_id,))
+    cursor.execute("SELECT COALESCE(MAX(score), 0) AS m FROM test_results WHERE user_id = %s", (user_id,))
     best_score = cursor.fetchone()["m"]
 
-    cursor.execute("SELECT COALESCE(SUM(broken_links), 0) AS b FROM test_results WHERE user_id = ?", (user_id,))
+    cursor.execute("SELECT COALESCE(SUM(broken_links), 0) AS b FROM test_results WHERE user_id = %s", (user_id,))
     total_broken = cursor.fetchone()["b"]
 
     conn.close()
@@ -298,9 +299,9 @@ def get_user_tests(user_id: int, limit: int = 20) -> list[dict]:
         SELECT id, url, score, broken_links, total_links,
                working_links, load_time, tested_at
         FROM test_results
-        WHERE user_id = ?
+        WHERE user_id = %s
         ORDER BY tested_at DESC
-        LIMIT ?
+        LIMIT %s
         """,
         (user_id, limit),
     )

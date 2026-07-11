@@ -1,8 +1,10 @@
-import sqlite3
+import os
 
-conn = sqlite3.connect('sqa_agent.db')
+import psycopg2
+
+conn = psycopg2.connect(os.environ["DATABASE_URL"])
 cursor = conn.cursor()
-cursor.execute("UPDATE users SET role='admin' WHERE email='admin2@sqa.com'")
+cursor.execute("UPDATE users SET role='admin' WHERE email=%s", ("admin2@sqa.com",))
 conn.commit()
 print("Rows updated:", cursor.rowcount)
 conn.close()
